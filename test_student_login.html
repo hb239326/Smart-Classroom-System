@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Student Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .test-section {
+            background: #f5f5f5;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Smart Classroom - Student Login Test</h1>
+    
+    <div class="test-section">
+        <h2>Step 1: Test Registration</h2>
+        <button onclick="testRegistration()">Register Test Student</button>
+        <div id="registrationResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Step 2: Test Login</h2>
+        <button onclick="testLogin()">Login as Student</button>
+        <div id="loginResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Step 3: Test Dashboard Access</h2>
+        <button onclick="testDashboard()">Test Student Dashboard</button>
+        <div id="dashboardResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Step 4: Test Complete Flow</h2>
+        <button onclick="testCompleteFlow()">Test Complete Login Flow</button>
+        <div id="completeFlowResult" class="result"></div>
+    </div>
+
+    <script>
+        const BASE_URL = 'http://localhost:5000';
+        
+        function showResult(elementId, message, isSuccess = true) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="${isSuccess ? 'success' : 'error'}">${message}</div>`;
+        }
+        
+        async function testRegistration() {
+            try {
+                const studentData = {
+                    name: "Test Student",
+                    email: "test.student@example.com",
+                    phone: "1234567890",
+                    password: "password123",
+                    confirm_password: "password123",
+                    user_type: "student"
+                };
+                
+                const response = await fetch(`${BASE_URL}/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(studentData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showResult('registrationResult', `Registration successful: ${result.message}`, true);
+                } else {
+                    showResult('registrationResult', `Registration failed: ${result.message}`, false);
+                }
+            } catch (error) {
+                showResult('registrationResult', `Registration error: ${error.message}`, false);
+            }
+        }
+        
+        async function testLogin() {
+            try {
+                const loginData = {
+                    email: "test.student@example.com",
+                    password: "password123",
+                    user_type: "student"
+                };
+                
+                const response = await fetch(`${BASE_URL}/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(loginData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    // Store session
+                    sessionStorage.setItem('user', JSON.stringify(result.user));
+                    sessionStorage.setItem('token', result.token);
+                    
+                    showResult('loginResult', `Login successful! User: ${result.user.name}, Token: ${result.token.substring(0, 20)}...`, true);
+                } else {
+                    showResult('loginResult', `Login failed: ${result.message}`, false);
+                }
+            } catch (error) {
+                showResult('loginResult', `Login error: ${error.message}`, false);
+            }
+        }
+        
+        async function testDashboard() {
+            try {
+                const token = sessionStorage.getItem('token');
+                
+                if (!token) {
+                    showResult('dashboardResult', 'No token found. Please login first.', false);
+                    return;
+                }
+                
+                const response = await fetch(`${BASE_URL}/student/dashboard`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    showResult('dashboardResult', `Dashboard access successful! Data: ${JSON.stringify(data).substring(0, 100)}...`, true);
+                } else {
+                    showResult('dashboardResult', `Dashboard access failed: ${response.status} - ${response.statusText}`, false);
+                }
+            } catch (error) {
+                showResult('dashboardResult', `Dashboard error: ${error.message}`, false);
+            }
+        }
+        
+        async function testCompleteFlow() {
+            try {
+                let message = "Complete Flow Test:\n\n";
+                
+                // Step 1: Registration
+                message += "1. Testing Registration...\n";
+                const regResponse = await fetch(`${BASE_URL}/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: "Flow Test Student",
+                        email: "flow.test@example.com",
+                        phone: "9876543210",
+                        password: "test123",
+                        confirm_password: "test123",
+                        user_type: "student"
+                    })
+                });
+                
+                if (regResponse.ok) {
+                    message += "   Registration: SUCCESS\n";
+                } else {
+                    const regResult = await regResponse.json();
+                    message += `   Registration: FAILED - ${regResult.message}\n`;
+                }
+                
+                // Step 2: Login
+                message += "2. Testing Login...\n";
+                const loginResponse = await fetch(`${BASE_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: "flow.test@example.com",
+                        password: "test123",
+                        user_type: "student"
+                    })
+                });
+                
+                if (loginResponse.ok) {
+                    const loginResult = await loginResponse.json();
+                    sessionStorage.setItem('user', JSON.stringify(loginResult.user));
+                    sessionStorage.setItem('token', loginResult.token);
+                    message += "   Login: SUCCESS\n";
+                } else {
+                    const loginResult = await loginResponse.json();
+                    message += `   Login: FAILED - ${loginResult.message}\n`;
+                }
+                
+                // Step 3: Dashboard Access
+                message += "3. Testing Dashboard Access...\n";
+                const token = sessionStorage.getItem('token');
+                if (token) {
+                    const dashResponse = await fetch(`${BASE_URL}/student/dashboard`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (dashResponse.ok) {
+                        message += "   Dashboard Access: SUCCESS\n";
+                    } else {
+                        message += `   Dashboard Access: FAILED - ${dashResponse.status}\n`;
+                    }
+                } else {
+                    message += "   Dashboard Access: FAILED - No token\n";
+                }
+                
+                // Step 4: Session Check
+                message += "4. Testing Session Management...\n";
+                const user = sessionStorage.getItem('user');
+                const tokenCheck = sessionStorage.getItem('token');
+                
+                if (user && tokenCheck) {
+                    message += "   Session Management: SUCCESS\n";
+                } else {
+                    message += "   Session Management: FAILED\n";
+                }
+                
+                showResult('completeFlowResult', message.replace(/\n/g, '<br>'), true);
+                
+            } catch (error) {
+                showResult('completeFlowResult', `Complete flow error: ${error.message}`, false);
+            }
+        }
+        
+        // Auto-test on page load
+        window.onload = function() {
+            console.log('Test page loaded. Ready to test student login flow.');
+        };
+    </script>
+</body>
+</html>
